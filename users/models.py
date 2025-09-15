@@ -30,9 +30,9 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
 
-        if extra_fields.get('is_staff'):
+        if extra_fields.get('is_staff') is not True:
             raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser'):
+        if extra_fields.get('is_superuser') is not True:
             raise ValueError('Superuser must have is_superuser=True.')
         return self.create_user(email, password, **extra_fields)
 
@@ -75,3 +75,73 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+class Passenger(models.Model):
+    """
+    Passenger profile model that extends the User model functionality
+    for passengers in the ride-sharing application.
+    """
+    # One-to-one relationship with the User model
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        limit_choices_to={'user_type': 'passenger'}
+        )
+    
+    # Passenger specific fields
+    home_address = models.CharField(max_length=255, blank=True)
+    work_address = models.CharField(max_length=255, blank=True)
+    emergency_contact_name = models.CharField(max_length=150, blank=True)
+    emergency_contact_phone = models.CharField(
+        max_length=15,
+        validators=[RegexValidator(r'^\+?1?\d{9,15}$')],
+        blank=True
+    )
+    
+    # Payment preferences
+    preferred_payment_method = models.CharField(
+        max_length=50, 
+        choices=[
+            ('cash', 'Cash'), 
+            ('card', 'Credit/Debit Card'), 
+            ('mobile_money', 'Mobile Money'), 
+            ('wallet', 'Digital Wallet')
+        ], 
+        default='card'
+        )
+    
+    # Ride preferences
+    preferred_car_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('economy', 'Economy'),
+            ('comfort', 'Comfort'),
+            ('premium', 'Premium'),
+            ('any', 'Any')
+        ],
+        default='economy'
+        )
+    
+    # Rating and ride stats
+    average_rating = models.DecimalField(
+        max_digits=3, 
+        decimal_places=2, 
+        default=5.0
+        )
+    total_rides = models.PositiveIntegerField(default=0)
+    
+    # Profile completion and verification
+    is_phone_verified = models.BooleanField(default=False)
+    is_profile_complete = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'passengers'
+        verbose_name = 'Passenger'
+        verbose_name_plural = 'Passengers'
+        
+    def __str__(self) -> str:
+        return f"Passenger: {self.user.email}"
